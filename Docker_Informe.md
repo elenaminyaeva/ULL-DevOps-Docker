@@ -265,7 +265,7 @@ ljo1n3ygvmvp        helloworld          replicated          1/1                 
 
 1. DNS Settings changed
 
-![Docker](/images/3.png)
+![Docker](/images/7.png)
 
 2. SSH server (2) fails with timeout error
  
@@ -276,14 +276,14 @@ Nodejs App --> /var/tmp/Nodeja-application-with-docker
 ```
 getaddrinfo EAI_AGAIN
 ```
-![Docker](/images/4.png)
+![Docker](/images/5.png)
 
 4. Docker restart fails with the following error:
 
 ```
 Failed to start docker application container engine
 ```
-![Docker](/images/4.png)
+![Docker](/images/6.png)
 
 
 
