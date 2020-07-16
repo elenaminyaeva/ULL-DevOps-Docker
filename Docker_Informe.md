@@ -3,7 +3,7 @@
 ## Environment Set Up
 
 192.168.20.20 --> Ansible Control Server (1)
-192.168.20.27 --> Swarm Manager Server  (2)
+192.168.20.30 --> Swarm Manager Server  (2)
 
 1. Playbook docker.yml 
 
@@ -59,7 +59,7 @@ ansible-galaxy init docker
 ```
 ![Docker](/images/2.png)
 
-5. Install Docket on (2) and check the installed version
+5. Install Docker on (2) and check the installed version
 ```
 # docker version
 Client: Docker Engine - Community
@@ -92,7 +92,7 @@ Server: Docker Engine - Community
 ```
 
 6. Create Swarm_Worker_1 VM using ansible playbook
-IP --> 192.168.20.28 (3)
+IP --> 192.168.20.31 (3)
 
 7. Install docker on (3) and check version
 
@@ -130,7 +130,7 @@ Server: Docker Engine - Community
 ```
 
 8. Create Swarm_Worker_2 VM using ansible playbook
-IP --> 192.168.20.29 (4)
+IP --> 192.168.20.32 (4)
 
 9. Install docker on (3) and check version
 ![Docker](/images/3.png)
@@ -180,6 +180,8 @@ ufw enable
 
 systemctl restart docker
 ```
+
+Ya están abiertos --> no hace falta
 
 ## Create Swarm
 
@@ -235,55 +237,153 @@ ID                            HOSTNAME            STATUS              AVAILABILI
 # docker swarm join --token SWMTKN-1-5zgbvamgc5zcnib4l5ablpysjirv12r4ycaat50q4ib9d01me4-4sehycdyr9b9b7in3gsskdllk 192.168.20.27:2377
 This node joined a swarm as a worker.
 ```
-Ceck current state 
+Check current state 
 ```
 ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VERSION
-21zfgkavepn2z349ac3m31o3j *   ubuntu              Ready               Active              Leader              19.03.12
-mjjl40vjr6ye4uon8xi1e3aax     ubuntu              Ready               Active                                  19.03.12
-uthfhenxsmmcbb2w49sa6rhz4     ubuntu              Ready               Active                                  19.03.12
+l5ztv11jfkyjl4ifouny8wgth *   manager             Ready               Active              Leader              19.03.12
+pvq9579y790c50y9dmcilceot     worker1             Ready               Active                                  19.03.12
+wfiteggh59zid2njam23jxzdn     worker2             Ready               Active                                  19.03.12
 ```
+Change hostname 
+
+```
+hostname manager
+service docker restart
+```
+
 
 ## Deploy a service to the swarm
 
 1. Run the following command on manager machine: 
 ```
-# docker service create --replicas 1 --name helloworld alpine ping docker.com
-
-ljo1n3ygvmvpzunufwrndu4ba
-overall progress: 1 out of 1 tasks 
-1/1: running   [==================================================>] 
-verify: Service converged 
+# docker service create --replicas 3 --name helloworld alpine ping docker.com
+wssym5qnk76at52e34sv5ualx
+overall progress: 3 out of 3 tasks 
+1/3: running   [==================================================>] 
+2/3: running   [==================================================>] 
+3/3: running   [==================================================>]
 ```
 ```
 # docker service ls
+ID                  NAME                MODE                REPLICAS            IMAGE                 PORTS
+wssym5qnk76a        helloworld          replicated          3/3                 alpine:latest       
+```
+
+
+## Deploy Realworld App with *docker-compose*
+
+1. Clone Realworld App from github --> https://github.com/gothinkster/node-express-realworld-example-app.git
+2. Add Dockerfile
+```
+FROM node:12
+  
+# Create app directory
+WORKDIR /usr/src/app
+
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
+COPY package*.json ./
+
+RUN npm install
+# If you are building your code for production
+# RUN npm ci --only=production
+
+# Bundle app source
+COPY . .
+
+EXPOSE 8080
+CMD [ "node", "app.js" ]
+```
+3. Install docker-compose
+4. Add docker-compose.yml
+
+```
+version: '3'
+services:
+  web:
+    image: node-web-app
+    build: .
+    command: "node app.js"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - "mongo"
+  mongo:
+    image: "mongo"
+    ports:
+      - "27017:27017"
+```
+5. docker-compose up --build -d mongo
+6. docker-compose up --build -d web
+7. docker-compose up 
+
+![Docker](/images/8.png)
+
+## Deploy Realworld App to the swarm
+
+1. Clone Realworld App from github --> https://github.com/gothinkster/react-redux-realworld-example-app.git
+2. Add Dockerfile
+
+```
+FROM node:12
+  
+# Create app directory
+WORKDIR /usr/src/app
+
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
+COPY package*.json ./
+
+RUN npm install
+# If you are building your code for production
+# RUN npm ci --only=production
+
+# Bundle app source
+COPY . .
+
+EXPOSE 4100
+CMD [ "npm", "start" ]
+```
+
+3. Build image 
+```
+docker build -t web-app
+```
+```
+# docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+web-app             latest              91453a6c9676        11 hours ago        1.24GB
+```
+
+4. Create replicated service
+```
+docker service create -p 3000:4100 --replicas 3 --name realworld web-app
+```
+
+5. Check results
+```
+# docker service ls
 ID                  NAME                MODE                REPLICAS            IMAGE               PORTS
-ljo1n3ygvmvp        helloworld          replicated          1/1                 alpine:latest       
+wssym5qnk76a        helloworld          replicated          3/3                 alpine:latest       
+y56fkvq2jffr        mongodb             replicated          1/1                 mongo:latest        
+b7yz7az78xyq        realworld           replicated          3/3                 web-app:latest      *:3000->4100/tcp
+````
+
+Swarm Manager
 ```
+curl http://192.168.20.30:3000/
+curl http://192.168.20.31:3000/
+curl http://192.168.20.32:3000/
+````
 
+![Docker](/images/9.png)
 
-## DNS Problem
+Worker_1
 
-1. DNS Settings changed
+![Docker](/images/10.png)
 
-![Docker](/images/7.png)
+Worker_2
 
-2. SSH server (2) fails with timeout error
- 
-3. Docker run fails on the *RUN NPM step* with the following error:
-
-Nodejs App --> /var/tmp/Nodeja-application-with-docker
-
-```
-getaddrinfo EAI_AGAIN
-```
-![Docker](/images/5.png)
-
-4. Docker restart fails with the following error:
-
-```
-Failed to start docker application container engine
-```
-![Docker](/images/6.png)
-
-
-
+![Docker](/images/11.png)
