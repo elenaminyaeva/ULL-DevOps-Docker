@@ -387,3 +387,336 @@ Worker_1
 Worker_2
 
 ![Docker](/images/11.png)
+
+
+## Kubernetes
+
+### Preconditions 
+
++ Install
+
+```
+yum install python3
+```
+```
+yum install python36-devel
+```
+```
+easy_install-3.6 pip
+```
+```
+yum install python-netaddr
+```
+```
+yum install python-pip
+```
+```
+pip install -U Jinja2
+```
+```
+
+```
+
++ Configure NOPASSWD for sudoers on the cluster machines 
+```
+sudo visudo
+```
+Add the folowwing:
+```
+root     ALL=(ALL) NOPASSWD:ALL
+```
+
+```
+[root@new_control ansible]# pip3 -V
+pip 9.0.3 from /usr/lib/python3.6/site-packages (python 3.6)
+```
+
+### Kubernetes
+
+```
+git clone https://github.com/kubernetes-sigs/kubespray.git
+```
+
+```
+[root@new_control ansible]# cd kubespray/
+[root@new_control kubespray]# pip3 install -r requirements.txt
+```
+```
+[root@new_control kubespray]# cp -rfp inventory/sample inventory/mycluster
+[root@new_control kubespray]# declare -a IPS=(192.168.20.36 192.168.20.37 192.168.20.34 192.168.20.35)
+```
+
+```
+CONFIG_FILE=inventory/mycluster/hosts.yml python3 contrib/inventory_builder/inventory.py ${IPS[@]}
+```
+Result
+
+```
+all:
+  hosts:
+    node1:
+      ansible_host: 192.168.20.36
+      ip: 192.168.20.36
+      access_ip: 192.168.20.36
+    node2:
+      ansible_host: 192.168.20.37
+      ip: 192.168.20.37
+      access_ip: 192.168.20.37
+    node3:
+      ansible_host: 192.168.20.34
+      ip: 192.168.20.34
+      access_ip: 192.168.20.34
+    node4:
+      ansible_host: 192.168.20.35
+      ip: 192.168.20.35
+      access_ip: 192.168.20.35
+  children:
+    kube-master:
+      hosts:
+        node1:
+        node2:
+    kube-node:
+      hosts:
+        node1:
+        node2:
+        node3:
+        node4:
+    etcd:
+      hosts:
+        node1:
+        node2:
+        node3:
+    k8s-cluster:
+      children:
+        kube-master:
+        kube-node:
+    calico-rr:
+      hosts: {}
+```
+
+Cluster related configurations
+```
+cat inventory/mycluster/group_vars/k8s-cluster/k8s-cluster.yml
+```
+**kube_version: v1.18.5**
+
+## Run Ansible Playbook
+
+```
+ansible-playbook -i inventory/mycluster/hosts.yml --user usuario cluster.yml -K
+```
+```
+root@node2:/etc/kubernetes# kubectl get nodes
+NAME    STATUS   ROLES    AGE     VERSION
+node1   Ready    master   8m17s   v1.18.5
+node2   Ready    master   6m12s   v1.18.5
+node3   Ready    <none>   4m30s   v1.18.5
+node4   Ready    <none>   4m29s   v1.18.5
+root@node2:/etc/kubernetes# kubectl version --short
+Client Version: v1.18.5
+Server Version: v1.18.5
+root@node2:/etc/kubernetes# kubectl cluster-info
+Kubernetes master is running at https://192.168.20.36:6443
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+root@node2:/etc/kubernetes# kubectl -n kube-system get pods
+NAME                                          READY   STATUS    RESTARTS   AGE
+NAME                                          READY   STATUS    RESTARTS   AGE
+calico-kube-controllers-6b649f597-q7bwj       1/1     Running   0          3m40s
+calico-node-652pk                             1/1     Running   1          4m43s
+calico-node-6cd77                             1/1     Running   1          4m43s
+calico-node-htv2l                             1/1     Running   1          4m43s
+calico-node-l6gx8                             1/1     Running   1          4m43s
+coredns-dff8fc7d-992tb                        1/1     Running   0          3m4s
+coredns-dff8fc7d-wnc7b                        1/1     Running   0          2m47s
+dns-autoscaler-66498f5c5f-p2sdz               1/1     Running   0          2m54s
+kube-apiserver-node1                          1/1     Running   0          8m49s
+kube-apiserver-node2                          1/1     Running   0          6m54s
+kube-controller-manager-node1                 1/1     Running   0          8m49s
+kube-controller-manager-node2                 1/1     Running   0          6m54s
+kube-proxy-7tzcf                              1/1     Running   0          5m23s
+kube-proxy-8djmq                              1/1     Running   0          5m23s
+kube-proxy-rqsrw                              1/1     Running   0          5m21s
+kube-proxy-w9lz4                              1/1     Running   0          5m20s
+kube-scheduler-node1                          1/1     Running   0          8m49s
+kube-scheduler-node2                          1/1     Running   0          6m54s
+kubernetes-dashboard-57777fbdcb-8wzcj         1/1     Running   0          2m42s
+kubernetes-metrics-scraper-54fbb4d595-vfrm6   1/1     Running   0          2m41s
+nginx-proxy-node3                             1/1     Running   0          5m28s
+nginx-proxy-node4                             1/1     Running   0          5m27s
+nodelocaldns-chmds                            1/1     Running   0          2m48s
+nodelocaldns-jxhmw                            1/1     Running   0          2m48s
+nodelocaldns-whskr                            1/1     Running   0          2m48s
+nodelocaldns-zzz46                            1/1     Running   0          2m48s
+root@node2:/etc/kubernetes# kubectl get pods
+No resources found in default namespace.
+```
+
+![Docker](/images/12.png)
+
+## Containers
+
+
+Terminal 1
+
+```
+kubectl run myshell -it --rm --image busybox -- sh
+```
+```
+root@node2:/etc/kubernetes# kubectl run myshell -it --rm --image busybox -- sh
+If you don't see a command prompt, try pressing enter.
+/ # hostname -i
+10.233.96.5
+/ # ping 10.233.96.6
+PING 10.233.96.6 (10.233.96.6): 56 data bytes
+64 bytes from 10.233.96.6: seq=0 ttl=63 time=0.579 ms
+64 bytes from 10.233.96.6: seq=1 ttl=63 time=0.096 ms
+```
+
+
+Terminal 2
+```
+kubectl run myshell2 -it --rm --image busybox -- sh
+```
+```
+root@node2:/home/usuario# kubectl run myshell2 -it --rm --image busybox -- sh
+If you don't see a command prompt, try pressing enter.
+/ # hostname -i
+10.233.96.6
+/ # ping 10.233.96.5
+PING 10.233.96.5 (10.233.96.5): 56 data bytes
+64 bytes from 10.233.96.5: seq=0 ttl=63 time=0.240 ms
+64 bytes from 10.233.96.5: seq=1 ttl=63 time=0.119 ms
+```
+
+## hello-kubernetes
+
+*Master node2*
+
+```
+git clone https://github.com/paulbouwer/hello-kubernetes.git
+```
+```
+root@node2:/etc/kubernetes/hello-kubernetes# kubectl apply -f yaml/hello-kubernetes.custom-message.yaml
+service/hello-kubernetes-custom created
+deployment.apps/hello-kubernetes-custom created
+```
+
+```
+# kubectl get service hello-kubernetes
+NAME               TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+hello-kubernetes   LoadBalancer   10.233.9.214   <pending>     80:31123/TCP   6m16s
+```
+```
+root@node2:/etc/kubernetes/hello-kubernetes/app# ping 10.233.9.214
+PING 10.233.9.214 (10.233.9.214) 56(84) bytes of data.
+64 bytes from 10.233.9.214: icmp_seq=1 ttl=64 time=0.121 ms
+```
+
+![Docker](/images/13.png)
+
+*Master node1*
+```
+root@node1:/etc# ping 10.233.9.214
+PING 10.233.9.214 (10.233.9.214) 56(84) bytes of data.
+64 bytes from 10.233.9.214: icmp_seq=1 ttl=64 time=0.162 ms
+64 bytes from 10.233.9.214: icmp_seq=2 ttl=64 time=0.078 ms
+64 bytes from 10.233.9.214: icmp_seq=3 ttl=64 time=0.096 ms
+```
+```
+root@node2:/etc/kubernetes/hello-kubernetes/app# kubectl get pods -o wide
+NAME                                       READY   STATUS    RESTARTS   AGE   IP             NODE    NOMINATED NODE   READINESS GATES
+hello-kubernetes-594f6f475f-749x6          1/1     Running   0          43s   10.233.90.2    node1   <none>           <none>
+hello-kubernetes-594f6f475f-c8zqd          1/1     Running   0          43s   10.233.92.2    node3   <none>           <none>
+hello-kubernetes-594f6f475f-mvncc          1/1     Running   0          43s   10.233.105.4   node4   <none>           <none>
+hello-kubernetes-custom-7555f78555-hxj5h   1/1     Running   0          3m    10.233.92.1    node3   <none>           <none>
+hello-kubernetes-custom-7555f78555-xvbsg   1/1     Running   0          3m    10.233.96.3    node2   <none>           <none>
+hello-kubernetes-custom-7555f78555-z8x4z   1/1     Running   0          3m    10.233.105.3   node4   <none>           <none>
+```
+
+
+## Realworld Frontend
+
+```
+git clone
+```
+
+Add Dockerfile
+```
+root@node1:/etc/kubernetes/react-redux-realworld-example-app# cat Dockerfile 
+FROM node:13.6.0-alpine
+
+# Create app directory
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+
+# Install app dependencies
+COPY package.json /usr/src/app/
+RUN npm install
+
+# Bundle app source
+COPY . /usr/src/app
+
+USER node
+CMD [ "npm", "start" ]
+```
+Build image
+```
+docker build -t react-kubernetes .
+```
+
+Add .yaml file with **imagePullPolicy: Never** as we´re using a local image
+```
+root@node1:/etc/kubernetes/react-redux-realworld-example-app# cat react-kubernetes.yaml 
+apiVersion: v1
+kind: Service
+metadata:
+  name: react-kubernetes
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+  selector:
+    app: react-kubernetes
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-kubernetes
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: react-kubernetes
+  template:
+    metadata:
+      labels:
+        app: react-kubernetes
+    spec:
+      containers:
+      - name: react-kubernetes
+        image: react-kubernetes
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+```
+
+```
+kubectl apply -f react-kubernetes.yaml
+```
+
+```
+root@node1:/etc/kubernetes/react-redux-realworld-example-app# kubectl get pods
+NAME                                       READY   STATUS              RESTARTS   AGE
+hello-kubernetes-594f6f475f-749x6          1/1     Running             0          124m
+hello-kubernetes-594f6f475f-c8zqd          1/1     Running             0          124m
+hello-kubernetes-594f6f475f-mvncc          1/1     Running             0          124m
+hello-kubernetes-custom-7555f78555-hxj5h   1/1     Running             0          127m
+hello-kubernetes-custom-7555f78555-xvbsg   1/1     Running             0          127m
+hello-kubernetes-custom-7555f78555-z8x4z   1/1     Running             0          127m
+react-kubernetes-5c87479c9b-5zqtq          0/1     ErrImageNeverPull   0          8m12s
+react-kubernetes-5c87479c9b-s7499          1/1     Running             0          12m
+react-kubernetes-5db96cdc7c-2m4wk          0/1     ErrImageNeverPull   0          8m
+react-kubernetes-f8bc75bc7-pp757           0/1     ImagePullBackOff    0          7m45s
+```
