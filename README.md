@@ -665,7 +665,7 @@ Build image
 docker build -t react-kubernetes .
 ```
 
-Add .yaml file with **imagePullPolicy: Never** as we´re using a local image
+Add .yaml file with **imagePullPolicy: Never** as we're using a local image
 ```
 root@node1:/etc/kubernetes/react-redux-realworld-example-app# cat react-kubernetes.yaml 
 apiVersion: v1
@@ -719,4 +719,241 @@ react-kubernetes-5c87479c9b-5zqtq          0/1     ErrImageNeverPull   0        
 react-kubernetes-5c87479c9b-s7499          1/1     Running             0          12m
 react-kubernetes-5db96cdc7c-2m4wk          0/1     ErrImageNeverPull   0          8m
 react-kubernetes-f8bc75bc7-pp757           0/1     ImagePullBackOff    0          7m45s
+```
+
+Build on all nodes???????
+
+## MongoDB
+
+Add .yaml file
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  labels:
+    run: mongo
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  selector:
+    run: mongo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      run: mongo
+  template:
+    metadata:
+      labels:
+        run: mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo
+        ports:
+        - containerPort: 27017
+```
+
+```
+kubectl apply -f mongo.yaml
+```
+```
+root@node1:/etc/kubernetes/node-express-realworld-example-app# kubectl get pods -o wide
+NAME                                       READY   STATUS              RESTARTS   AGE    IP              NODE     NOMINATED NODE   READINESS GATES
+mongo-5bc9c9dbbf-kpvkv                     1/1     Running             0          4m9s   10.233.92.12    node3    <none>           <none>
+mongo-5bc9c9dbbf-mmjf2                     1/1     Running             0          4m9s   10.233.90.9     node1    <none>           <none>
+mongo-5bc9c9dbbf-nw9jk                     1/1     Running             0          4m9s   10.233.105.10   node4    <none>           <none>
+```
+
+## Realworld BackEnd
+
+Add Dockerfile 
+
+```
+FROM node:13.6.0-alpine
+  
+# Create app directory
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+
+# Install app dependencies
+COPY package.json /usr/src/app/
+RUN npm install
+
+# Bundle app source
+COPY . /usr/src/app
+
+EXPOSE 3000
+ENV PORT=3000
+ENV MONGO_SERVICE_HOST=mongo
+ENV MONGO_SERVICE_PORT=27017
+
+USER node
+CMD [ "npm", "start" ]
+```
+
+```
+# docker build -t realworld .
+```
+
+```
+root@node1:/etc/kubernetes/node-express-realworld-example-app# kubectl apply -f realworld.yaml
+service/realworld created
+deployment.apps/realworld created
+```
+
+```
+root@node1:/etc/kubernetes/node-express-realworld-example-app# kubectl get pods -o wide
+NAME                                       READY   STATUS              RESTARTS   AGE   IP              NODE     NOMINATED NODE   READINESS GATES
+realworld-d8b559548-5cnr7                  1/1     Running             0          19s   10.233.90.10    node1    <none>           <none>
+realworld-d8b559548-kph5g                  0/1     ErrImageNeverPull   0          96s   10.233.92.14    node3    <none>           <none>
+realworld-d8b559548-rxmb8                  0/1     ErrImageNeverPull   0          96s   10.233.105.11   node4    <none>           <none>
+realworld-d8b559548-xnkkc                  0/1     ErrImageNeverPull   0          96s   10.233.96.7     node2    <none>           <none>
+```
+
+
+## Push containers to docker hub
+
++ sign Up on https://hub.docker.com/
++ create a repository --> https://hub.docker.com/repository/docker/elenaminyaeva/realworld
++ docker login
+```
+docker login -u elenaminyaeva -p Zxcvbn123
+```
++ copy image ID
+```
+root@node1:/etc/kubernetes/node-express-realworld-example-app# docker images
+REPOSITORY                                         TAG                 IMAGE ID            CREATED             SIZE
+elenaminyaeva/realworld                            elena_images        b11beea1f590        4 days ago          212MB
+realworld                                          latest              b11beea1f590        4 days ago          212MB
+<none>                                             <none>              8747ab92ebdf        4 days ago          212MB
+react-kubernetes                                   latest              40c02b7d2cd5        5 days ago          358MB
+nginx                                              1.19                0901fa9da894        2 weeks ago         132MB
+mongo                                              latest              6d11486a97a7        2 weeks ago         388MB
+k8s.gcr.io/kube-proxy                              v1.18.5             a1daed4e2b60        4 weeks ago         117MB
+k8s.gcr.io/kube-apiserver                          v1.18.5             08ca24f16874        4 weeks ago         173MB
+k8s.gcr.io/kube-controller-manager                 v1.18.5             8d69eaf196dc        4 weeks ago         162MB
+k8s.gcr.io/kube-scheduler                          v1.18.5             39d887c6621d        4 weeks ago         95.3MB
+kubernetesui/dashboard-amd64                       v2.0.2              05126876084d        5 weeks ago         225MB
+calico/node                                        v3.15.0             e0564c180e7c        5 weeks ago         262MB
+calico/cni                                         v3.15.0             589bf4b0231f        5 weeks ago         217MB
+calico/kube-controllers                            v3.15.0             5c0685e144e2        5 weeks ago         53.1MB
+k8s.gcr.io/cluster-proportional-autoscaler-amd64   1.8.1               17ffd2ee7ad8        6 weeks ago         40.7MB
+kubernetesui/metrics-scraper                       v1.0.5              2cd72547f23f        7 weeks ago         36.7MB
+k8s.gcr.io/k8s-dns-node-cache                      1.15.13             3f7a09f7cade        2 months ago        107MB
+paulbouwer/hello-kubernetes                        1.8                 444fd83eb497        3 months ago        130MB
+k8s.gcr.io/pause                                   3.2                 80d28bedfe5d        5 months ago        683kB
+coredns/coredns                                    1.6.7               67da37a9a360        6 months ago        43.8MB
+node                                               13.6.0-alpine       2d8f48ba52b1        6 months ago        112MB
+quay.io/coreos/etcd                                v3.4.3              a0b920cf970d        9 months ago        83.6MB
+```
+
++ add tag
+```
+docker tag b11beea1f590 elenaminyaeva/realworld:elena_images
+```
++ push image to docker hub
+```
+docker push elenaminyaeva/realworld:elena_images
+```
+
++ add secret docker-registry
+```
+root@node1:/etc/kubernetes/node-express-realworld-example-app# export DOCKER_REGISTRY_SERVER=https://index.docker.io/v1/
+root@node1:/etc/kubernetes/node-express-realworld-example-app# export DOCKER_USER=elenaminyaeva
+root@node1:/etc/kubernetes/node-express-realworld-example-app# export DOCKER_EMAIL=alu0101251981@ull.edu.es
+root@node1:/etc/kubernetes/node-express-realworld-example-app# export DOCKER_PASSWORD=Zxcvbn123
+root@node1:/etc/kubernetes/node-express-realworld-example-app# kubectl create secret docker-registry elenaminyaeva \
+> --docker-server=$DOCKER_REGISTRY_SERVER \
+> --docker-username=$DOCKER_USER \
+> --docker-password=$DOCKER_PASSWORD \
+> --docker-email=$DOCKER_EMAIL
+secret/elenaminyaeva created
+```
+
++ change manifest file (.yaml)
+```
+spec:
+      containers:
+      - name: realworld
+        image: index.docker.io/elenaminyaeva/realworld:elena_images
+        ports:
+        - containerPort: 8000
+      imagePullSecrets:
+      - name: elenaminyaeva
+```
+
++ reconfigure pod
+```
+kubectl apply -f realwold.yaml
+```
+
+Repeat steps for **react-kubernetes** image
+
+![Docker](/images/14.png)
+
+### Problem SOLVED 
+
+**kubectl logs -p realworld-d8b559548-srnfd**
+
+> conduit-node@1.0.0 start /usr/src/app
+> node ./app.js
+
+Listening on port 3000
+
+/usr/src/app/node_modules/mongodb/lib/server.js:242
+        process.nextTick(function() { throw err; })
+                                      ^
+Error: connect ECONNREFUSED 127.0.0.1:27017
+    at TCPConnectWrap.afterConnect [as oncomplete] (net.js:1137:16)
+Emitted 'error' event on NativeConnection instance at:
+    at NativeConnection.Connection.error (/usr/src/app/node_modules/mongoose/lib/connection.js:443:8)
+    at /usr/src/app/node_modules/mongoose/lib/connection.js:472:15
+    at /usr/src/app/node_modules/mongoose/lib/drivers/node-mongodb-native/connection.js:59:21
+    at /usr/src/app/node_modules/mongodb/lib/db.js:232:14
+    at Server.<anonymous> (/usr/src/app/node_modules/mongodb/lib/server.js:240:9)
+    at Object.onceWrapper (events.js:428:26)
+    at Server.emit (events.js:321:20)
+    at Pool.<anonymous> (/usr/src/app/node_modules/mongodb-core/lib/topologies/server.js:308:68)
+    at Pool.emit (events.js:321:20)
+    at Connection.<anonymous> (/usr/src/app/node_modules/mongodb-core/lib/connection/pool.js:115:12)
+    at Object.onceWrapper (events.js:428:26)
+    at Connection.emit (events.js:321:20)
+    at Socket.<anonymous> (/usr/src/app/node_modules/mongodb-core/lib/connection/connection.js:144:49)
+    at Object.onceWrapper (events.js:428:26)
+    at Socket.emit (events.js:321:20)
+    at emitErrorNT (internal/streams/destroy.js:84:8) {
+  name: 'MongoError',
+  message: 'connect ECONNREFUSED 127.0.0.1:27017'
+}
+npm ERR! code ELIFECYCLE
+npm ERR! errno 1
+npm ERR! conduit-node@1.0.0 start: `node ./app.js`
+npm ERR! Exit status 1
+npm ERR! 
+npm ERR! Failed at the conduit-node@1.0.0 start script.
+npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+
+npm ERR! A complete log of this run can be found in:
+npm ERR!     /home/node/.npm/_logs/2020-07-23T12_18_18_608Z-debug.log
+
+---
+**SOLUTION**
+
+Change app.js file --> change mongo host from *localhost* to *mongo*
+```
+if(isProduction){
+  mongoose.connect(process.env.MONGODB_URI);
+} else {
+  mongoose.connect('mongodb://mongo/conduit');
+  mongoose.set('debug', true);
+}
 ```
