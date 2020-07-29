@@ -1314,7 +1314,9 @@ ingress-resource-1   <none>   nginx.example.com,react.example.com   192.168.20.2
 192.168.20.11 nginx.example.com
 192.168.20.11 react.example.com
 ```
+### Problem
 
+502 Bad Gateway error for react.example.com
 
 
 
