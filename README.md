@@ -1094,8 +1094,59 @@ NAME                        TYPE           CLUSTER-IP      EXTERNAL-IP      PORT
 my-release-nginx-ingress    LoadBalancer   10.233.54.123   192.168.20.244   80:31794/TCP,443:31500/TCP   7h54m
 ```
 
+## Configure Ingress for example app
 
-## Configure Ingress
+https://github.com/justmeandopensource/kubernetes/tree/master/yamls/ingress-demo
+
+```
+# cat ingress-resource-new.yaml 
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-resource-1
+spec:
+  rules:
+  - host: nginx.example.com
+    http:
+      paths:
+      - backend:
+          serviceName: nginx-deploy-main
+          servicePort: 80
+````
+```
+# cat nginx-deploy-main.yaml 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: nginx
+  name: nginx-deploy-main
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: nginx-main
+  template:
+    metadata:
+      labels:
+        run: nginx-main
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+```
+
+Update /etc/hosts
+
+```
+192.168.20.11 nginx.example.com
+```
+Result 
+
+![Docker](/images/15.png)
+
+
+## Configure Ingress for realworld
 
 1. Create an internal service --> react-kubernetes-internal.yaml 
 
@@ -1107,8 +1158,8 @@ metadata:
   name: react-kubernetes-internal
 spec:
   ports:
-  - port: 8080
-    targetPort: 8080
+  - port: 80
+    #targetPort: 8080
   selector:
     app: react-kubernetes-internal
 ---
@@ -1130,7 +1181,7 @@ spec:
       - name: react-kubernetes-internal
         image: index.docker.io/elenaminyaeva/react:elena_images
         ports:
-        - containerPort: 8080
+        - containerPort: 80
       imagePullSecrets:
       - name: elenaminyaeva
       hostNetwork: true
@@ -1141,7 +1192,7 @@ spec:
 root@node1:/etc/kubernetes/react-redux-realworld-example-app# kubectl get svc
 NAME                        TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)                      AGE
 ..
-react-kubernetes-internal   ClusterIP      10.233.9.23     <none>           8080/TCP                     7h31m
+react-kubernetes-internal   ClusterIP      10.233.9.23     <none>           80/TCP                     7h31m
 ```
 
 *no external-ip as internal service*
@@ -1149,24 +1200,42 @@ react-kubernetes-internal   ClusterIP      10.233.9.23     <none>           8080
 2. Create ingress --> ingress-react.yaml
 
 ```
-usuario@node1:/etc/kubernetes$ cat ingress-react.yaml 
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/use-regex: "true"
   name: ingress-resource-1
 spec:
   rules:
-  - host: react.com
+  - host: nginx.example.com
+    http:
+      paths:
+      - backend:
+          serviceName: nginx-deploy-main
+          servicePort: 80
+  - host: react.example.com
     http:
       paths:
       - backend:
           serviceName: react-kubernetes-internal
-          servicePort: 8080
+          servicePort: 80
 ```
 
-3. Check on node2
+```
+root@node1:/etc/kubernetes# kubectl get ing
+NAME                 CLASS    HOSTS                                 ADDRESS          PORTS   AGE
+ingress-resource-1   <none>   nginx.example.com,react.example.com   192.168.20.244   80      35m
+```
+
+
+3. Update /etc/hosts
+
+```
+192.168.20.11 nginx.example.com
+192.168.20.11 react.example.com
+```
+
 
 
 
