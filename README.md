@@ -957,3 +957,218 @@ if(isProduction){
   mongoose.set('debug', true);
 }
 ```
+
+##
+
+### Set up MetalLB Load Balancing
+
+```
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
+```
+```
+root@node1:/home/usuario# kubectl get ns
+NAME              STATUS   AGE
+default           Active   5d11h
+kube-node-lease   Active   5d11h
+kube-public       Active   5d11h
+kube-system       Active   5d11h
+metallb-system    Active   64s
+mongodb           Active   5d7h
+```
+
+```
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml
+```
+
+```
+root@node1:/etc/kubernetes# kubectl get pods -n metallb-system
+NAME                          READY   STATUS    RESTARTS   AGE
+controller-57f648cb96-bzhcx   1/1     Running   0          14h
+speaker-cpzg4                 1/1     Running   0          14h
+speaker-l7z7w                 1/1     Running   0          14h
+speaker-lmfrr                 1/1     Running   0          14h
+speaker-tb97p                 1/1     Running   0          14h
+```
+
+Create Configmap
+```
+vi configmap.yaml
+
+> apiVersion: v1
+> kind: ConfigMap
+> metadata:
+>   namespace: metallb-system
+>   name: config
+> data:
+>   config: |
+>     address-pools:
+>     - name: default
+>       protocol: layer2
+>       addresses:
+>       - 192.168.20.240-192.168.20.250
+```
+
+```
+kubectl create -f configmap.yaml
+```
+```
+root@node1:/etc/kubernetes# kubectl describe configmap config -nmetallb-system
+Name:         config
+Namespace:    metallb-system
+Labels:       <none>
+Annotations:  <none>
+
+Data
+====
+config:
+----
+address-pools:
+- name: default
+  protocol: layer2
+  addresses:
+  - 192.168.20.240-192.168.20.250
+```
+
+Result --> External-IP
+```
+root@node1:/etc/kubernetes# kubectl get service realworld
+NAME        TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)        AGE
+realworld   LoadBalancer   10.233.24.220   192.168.20.241   80:31645/TCP   4d8h
+
+root@node1:/etc/kubernetes# kubectl get service react-kubernetes
+NAME               TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)        AGE
+react-kubernetes   LoadBalancer   10.233.17.239   192.168.20.242   80:32518/TCP   5d9h
+```
+
+
+## Install Helm 
+
+```
+curl https://helm.baltorepo.com/organization/signing.asc | sudo apt-key add -
+sudo apt-get install apt-transport-https --yes
+echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+sudo apt-get update
+sudo apt-get install helm
+```
+```
+root@node1:/home/usuario# helm version --short
+v3.2.4+g0ad800e
+```
+
+## Install ingress
+
+https://docs.nginx.com/nginx-ingress-controller/installation/installation-with-helm/
+
+```
+git clone https://github.com/nginxinc/kubernetes-ingress/
+```
+```
+cd kubernetes-ingress/deployments/helm-chart
+```
+```
+helm repo add nginx-stable https://helm.nginx.com/stable
+helm repo update
+```
+```
+/helm-chart# helm install my-release nginx-stable/nginx-ingress
+NAME: my-release
+LAST DEPLOYED: Tue Jul 28 11:35:59 2020
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+The NGINX Ingress Controller has been installed.
+```
+
+```
+root@node1:/etc/kubernetes/react-redux-realworld-example-app# kubectl get pods -o wide
+NAME                                         READY   STATUS        RESTARTS   AGE     IP              NODE     NOMINATED NODE   READINESS GATES
+...
+my-release-nginx-ingress-6b6d84b496-gwdc8    1/1     Running       0          7h48m   10.233.96.12    node2    <none>           <none>
+```
+```
+root@node1:/etc/kubernetes# kubectl get svc
+NAME                        TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)                      AGE
+...
+my-release-nginx-ingress    LoadBalancer   10.233.54.123   192.168.20.244   80:31794/TCP,443:31500/TCP   7h54m
+```
+
+
+## Configure Ingress
+
+1. Create an internal service --> react-kubernetes-internal.yaml 
+
+```
+root@node1:/etc/kubernetes/react-redux-realworld-example-app# cat react-kubernetes-internal.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: react-kubernetes-internal
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: react-kubernetes-internal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-kubernetes-internal
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: react-kubernetes-internal
+  template:
+    metadata:
+      labels:
+        app: react-kubernetes-internal
+    spec:
+      containers:
+      - name: react-kubernetes-internal
+        image: index.docker.io/elenaminyaeva/react:elena_images
+        ports:
+        - containerPort: 8080
+      imagePullSecrets:
+      - name: elenaminyaeva
+      hostNetwork: true
+      dnsPolicy: Default  
+```
+
+```
+root@node1:/etc/kubernetes/react-redux-realworld-example-app# kubectl get svc
+NAME                        TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)                      AGE
+..
+react-kubernetes-internal   ClusterIP      10.233.9.23     <none>           8080/TCP                     7h31m
+```
+
+*no external-ip as internal service*
+
+2. Create ingress --> ingress-react.yaml
+
+```
+usuario@node1:/etc/kubernetes$ cat ingress-react.yaml 
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: ingress-resource-1
+spec:
+  rules:
+  - host: react.com
+    http:
+      paths:
+      - backend:
+          serviceName: react-kubernetes-internal
+          servicePort: 8080
+```
+
+3. Check on node2
+
+![Docker](/images/15.png)
+
+
+                     
