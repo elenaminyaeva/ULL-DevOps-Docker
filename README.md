@@ -1318,6 +1318,23 @@ ingress-resource-1   <none>   nginx.example.com,react.example.com   192.168.20.2
 
 502 Bad Gateway error for react.example.com
 
+```
+# kubectl get all -n nginx-ingress
+NAME                      READY   STATUS    RESTARTS   AGE
+pod/nginx-ingress-989mv   1/1     Running   2          3h45m
+pod/nginx-ingress-c7252   1/1     Running   0          3h45m
+pod/nginx-ingress-wz99x   1/1     Running   0          3h45m
+pod/nginx-ingress-xnhl7   1/1     Running   0          3h45m
+```
+```
+root@node1:/home/usuario# kubectl logs nginx-ingress-989mv -n nginx-ingress
+```
+
+```
+2020/07/29 13:33:14 [error] 215#215: *112 connect() failed (111: Connection refused) while connecting to upstream, client: 192.168.20.11, server: react.nginx.example.com, request: "GET / HTTP/1.1", upstream: "http://10.233.90.31:80/", host: "react.nginx.example.com"
+```
+
+
 
 
 
