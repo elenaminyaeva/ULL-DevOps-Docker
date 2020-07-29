@@ -1168,7 +1168,7 @@ spec:
 
 3. Check on node2
 
-![Docker](/images/15.png)
+
 
 
                      
