@@ -349,7 +349,7 @@ CMD [ "npm", "start" ]
 
 3. Build image 
 ```
-docker build -t web-app
+docker build -t web-app .
 ```
 ```
 # docker images
@@ -1039,7 +1039,85 @@ root@node1:/etc/kubernetes# kubectl get service react-kubernetes
 NAME               TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)        AGE
 react-kubernetes   LoadBalancer   10.233.17.239   192.168.20.242   80:32518/TCP   5d9h
 ```
+## NodePort Service
 
+react-new-try.yaml 
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: react-new-try
+  labels:
+    app: react-new-try
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 4100
+  selector:
+    app: react-new-try
+```
+
+```
+# kubectl describe svc react-new-try
+Name:                     react-new-try
+Namespace:                default
+Labels:                   app=react-new-try
+Annotations:              Selector:  app=react-new-try
+Type:                     NodePort
+IP:                       10.233.33.202
+Port:                     <unset>  80/TCP
+TargetPort:               4100/TCP
+NodePort:                 <unset>  31518/TCP
+Endpoints:                10.233.90.36:4100,10.233.92.33:4100,10.233.96.20:4100
+Session Affinity:         None
+External Traffic Policy:  Cluster
+```
+
+*Check Results*
++ Accessing using Pod IP
+
+```
+react-new-try-6ffdf667b4-wv7nk               1/1     Running   0          57s     10.233.96.20    node2    <none>           <none>
+react-new-try-6ffdf667b4-xg857               1/1     Running   0          40s     10.233.92.33    node3    <none>           <none>
+react-new-try-6ffdf667b4-z7cgs               1/1     Running   0          49s     10.233.90.36    node1    <none>           <none>
+```
+```
+# curl http://10.233.90.36:4100
+# curl http://10.233.92.33:4100
+# curl http://10.233.96.20:4100
+```
+PORT=targetPort=containerPort
+
++ Accessing using Node IP
+
+```
+NAME    STATUS   ROLES    AGE   VERSION   INTERNAL-IP     EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION       CONTAINER-RUNTIME
+node1   Ready    master   9d    v1.18.5   192.168.20.36   <none>        Ubuntu 18.04.2 LTS   4.15.0-112-generic   docker://19.3.11
+node2   Ready    master   9d    v1.18.5   192.168.20.37   <none>        Ubuntu 18.04.2 LTS   4.15.0-50-generic    docker://19.3.11
+node3   Ready    <none>   9d    v1.18.5   192.168.20.34   <none>        Ubuntu 18.04.2 LTS   4.15.0-50-generic    docker://19.3.11
+node4   Ready    <none>   9d    v1.18.5   192.168.20.35   <none>        Ubuntu 18.04.2 LTS   4.15.0-112-generic   docker://19.3.11
+```
+```
+#curl http://192.168.20.36:31518
+#curl http://192.168.20.37:31518
+#curl http://192.168.20.34:31518
+```
+
+PORT=nodePort
+
++ Accessing using Service IP
+
+```
+NAME                        TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)                      AGE
+react-new-try               NodePort       10.233.33.202   <none>           80:31518/TCP                 2m9s
+```
+```
+# curl http://10.233.33.202:80
+```
+
+PORT=port
 
 ## Install Helm 
 
@@ -1225,6 +1303,7 @@ Result
 ![Docker](/images/15.png)
 
 
+
 ## Configure Ingress for realworld
 
 1. Create an internal service --> react-kubernetes-internal.yaml 
@@ -1238,7 +1317,7 @@ metadata:
 spec:
   ports:
   - port: 80
-    #targetPort: 8080
+    targetPort: 4100
   selector:
     app: react-kubernetes-internal
 ---
@@ -1260,7 +1339,7 @@ spec:
       - name: react-kubernetes-internal
         image: index.docker.io/elenaminyaeva/react:elena_images
         ports:
-        - containerPort: 80
+        - containerPort: 4100
       imagePullSecrets:
       - name: elenaminyaeva
       hostNetwork: true
@@ -1314,7 +1393,8 @@ ingress-resource-1   <none>   nginx.example.com,react.example.com   192.168.20.2
 192.168.20.11 nginx.example.com
 192.168.20.11 react.example.com
 ```
-### Problem
+![Docker](/images/16.png)
+### Problem SOLVED
 
 502 Bad Gateway error for react.example.com
 
@@ -1333,6 +1413,18 @@ root@node1:/home/usuario# kubectl logs nginx-ingress-989mv -n nginx-ingress
 ```
 2020/07/29 13:33:14 [error] 215#215: *112 connect() failed (111: Connection refused) while connecting to upstream, client: 192.168.20.11, server: react.nginx.example.com, request: "GET / HTTP/1.1", upstream: "http://10.233.90.31:80/", host: "react.nginx.example.com"
 ```
+
+*Solution*
+
+Change targetPort=containerPort=appPort (according to package.json)
+
+"scripts": {
+    "start": "cross-env PORT=4100 react-scripts start",
+    "build": "react-scripts build",
+    "test": "cross-env PORT=4100 react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  },
+
 
 
 
