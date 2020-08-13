@@ -1706,3 +1706,93 @@ kubernetes                 ClusterIP      10.19.240.1     <none>          443/TC
 ngnix-deploy-87lfq         LoadBalancer   10.19.240.213   34.89.145.47    80:32265/TCP   5d19h
 ```
 
+### PROBLEM APP ISN'T ACCESSABLE 
+
+![GCloud](/images/27.png)
+
+![GCloud](/images/28.png)
+
+
+### PROBLEM ERROR IN PODS LOGS
+
+```
+Knex: run
+[start:server] $ npm install sqlite3 --save
+[start:server] Cannot find module '/usr/src/app/server/node_modules/sqlite3/lib/binding/node-v72-linux-x64/node_sqlite3.node'
+[start:server] Require stack:
+[start:server] - /usr/src/app/server/node_modules/sqlite3/lib/sqlite3.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/dialects/sqlite3/index.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/knex.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/index.js
+[start:server] - /usr/src/app/server/node_modules/knex/knex.js
+[start:server] - /usr/src/app/server/node_modules/schwifty/lib/index.js
+[start:server] - /usr/src/app/server/node_modules/glue/lib/index.js
+[start:server] - /usr/src/app/server/server/index.js
+[start:server] Error: Cannot find module '/usr/src/app/server/node_modules/sqlite3/lib/binding/node-v72-linux-x64/node_sqlite3.node'
+[start:server] Require stack:
+[start:server] - /usr/src/app/server/node_modules/sqlite3/lib/sqlite3.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/dialects/sqlite3/index.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/knex.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/index.js
+[start:server] - /usr/src/app/server/node_modules/knex/knex.js
+[start:server] - /usr/src/app/server/node_modules/schwifty/lib/index.js
+[start:server] - /usr/src/app/server/node_modules/glue/lib/index.js
+[start:server] - /usr/src/app/server/server/index.js
+[start:server]     at Function.Module._resolveFilename (internal/modules/cjs/loader.js:965:15)
+[start:server]     at Function.Module._load (internal/modules/cjs/loader.js:841:27)
+[start:server]     at Module.require (internal/modules/cjs/loader.js:1025:19)
+[start:server]     at require (internal/modules/cjs/helpers.js:72:18)
+[start:server]     at Object.<anonymous> (/usr/src/app/server/node_modules/sqlite3/lib/sqlite3.js:4:15)
+[start:server]     at Module._compile (internal/modules/cjs/loader.js:1137:30)
+[start:server]     at Object.Module._extensions..js (internal/modules/cjs/loader.js:1157:10)
+[start:server]     at Module.load (internal/modules/cjs/loader.js:985:32)
+[start:server]     at Function.Module._load (internal/modules/cjs/loader.js:878:14)
+[start:server]     at Module.require (internal/modules/cjs/loader.js:1025:19)
+[start:server] /usr/src/app/server/server/index.js:38
+[start:server]     throw err
+[start:server]     ^
+[start:server] 
+[start:server] Error: Knex: run
+[start:server] $ npm install sqlite3 --save
+[start:server] Cannot find module '/usr/src/app/server/node_modules/sqlite3/lib/binding/node-v72-linux-x64/node_sqlite3.node'
+[start:server] Require stack:
+[start:server] - /usr/src/app/server/node_modules/sqlite3/lib/sqlite3.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/dialects/sqlite3/index.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/knex.js
+[start:server] - /usr/src/app/server/node_modules/knex/lib/index.js
+[start:server] - /usr/src/app/server/node_modules/knex/knex.js
+[start:server] - /usr/src/app/server/node_modules/schwifty/lib/index.js
+[start:server] - /usr/src/app/server/node_modules/glue/lib/index.js
+[start:server] - /usr/src/app/server/server/index.js
+[start:server]     at Client_SQLite3.initializeDriver (/usr/src/app/server/node_modules/knex/lib/client.js:234:13)
+[start:server]     at Client_SQLite3.Client (/usr/src/app/server/node_modules/knex/lib/client.js:68:10)
+[start:server]     at new Client_SQLite3 (/usr/src/app/server/node_modules/knex/lib/dialects/sqlite3/index.js:17:10)
+[start:server]     at Knex (/usr/src/app/server/node_modules/knex/lib/knex.js:53:28)
+[start:server]     at Object.internals.schwifty (/usr/src/app/server/node_modules/schwifty/lib/index.js:245:74)
+[start:server]     at Object.register (/usr/src/app/server/node_modules/schwifty/lib/index.js:81:19)
+[start:server]     at internals.Server.register (/usr/src/app/server/node_modules/hapi/lib/server.js:453:35)
+[start:server]     at async Object.exports.compose (/usr/src/app/server/node_modules/glue/lib/index.js:48:9)
+[start:server]     at async Object.exports.deployment (/usr/src/app/server/server/index.js:8:18)
+[start:server] npm ERR! code ELIFECYCLE
+[start:server] npm ERR! errno 1
+[start:server] npm ERR! hapipal-realworld-example-app@0.0.0 start: `node server`
+[start:server] npm ERR! Exit status 1
+[start:server] npm ERR! 
+[start:server] npm ERR! Failed at the hapipal-realworld-example-app@0.0.0 start script.
+[start:server] npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+[start:server] 
+[start:server] npm ERR! A complete log of this run can be found in:
+[start:server] npm ERR!     /root/.npm/_logs/2020-08-13T10_35_56_844Z-debug.log
+[start:server] npm ERR! code ELIFECYCLE
+[start:server] npm ERR! errno 1
+[start:server] npm ERR! realworld@1.0.0 start:server: `cd server && npm start`
+[start:server] npm ERR! Exit status 1
+[start:server] npm ERR! 
+[start:server] npm ERR! Failed at the realworld@1.0.0 start:server script.
+[start:server] npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+[start:server] 
+[start:server] npm ERR! A complete log of this run can be found in:
+[start:server] npm ERR!     /root/.npm/_logs/2020-08-13T10_35_56_880Z-debug.log
+[start:server] npm run start:server exited with code 1
+
+```
