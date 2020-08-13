@@ -1041,7 +1041,7 @@ react-kubernetes   LoadBalancer   10.233.17.239   192.168.20.242   80:32518/TCP 
 ```
 ## NodePort Service
 
-react-new-try.yaml 
+### react-new-try.yaml 
 
 ```
 apiVersion: v1
@@ -1118,6 +1118,19 @@ react-new-try               NodePort       10.233.33.202   <none>           80:3
 ```
 
 PORT=port
+
+### realworld.yaml
+
++ Accessing using Pod IP
+```
+# curl http://10.233.105.33:3000/api/articles
+```
++ Accessing using Service IP
+
+```
+curl http://10.233.24.220:80/api/articles
+```
+
 
 ## Install Helm 
 
@@ -1392,8 +1405,10 @@ ingress-resource-1   <none>   nginx.example.com,react.example.com   192.168.20.2
 ```
 192.168.20.11 nginx.example.com
 192.168.20.11 react.example.com
+192.168.20.11 realworld.example.com
 ```
 ![Docker](/images/16.png)
+![Docker](/images/17.png)
 ### Problem SOLVED
 
 502 Bad Gateway error for react.example.com
@@ -1426,8 +1441,268 @@ Change targetPort=containerPort=appPort (according to package.json)
   },
 
 
+# K8s in GKE
 
+1. Install Google Cloud SDK
+https://cloud.google.com/sdk/docs/quickstart-macos
 
+2. Iniciate SDK
 
+```
+gcloud init
+```
+3. Set up a project
 
-                     
+```
+gcloud config set project elena-test-project-a966b
+```
+
+4. Install *kubectl*
+
+```
+brew install kubernetes-cli
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % kubectl version --client
+Client Version: version.Info{Major:"1", Minor:"18", GitVersion:"v1.18.6", GitCommit:"dff82dc0de47299ab66c83c626e08b245ab19037", GitTreeState:"clean", BuildDate:"2020-07-16T00:04:31Z", GoVersion:"go1.14.4", Compiler:"gc", Platform:"darwin/amd64"}
+```
+
+5. Create a cluster
+
+```
+gcloud services enable container.googleapis.com
+```
+```
+gcloud container clusters create elena-k8s --zone europe-west3 --num-nodes=2
+```
+```
+kubeconfig entry generated for elena-k8s.
+NAME       LOCATION      MASTER_VERSION  MASTER_IP       MACHINE_TYPE   NODE_VERSION   NUM_NODES  STATUS
+elena-k8s  europe-west3  1.15.12-gke.2   35.246.178.151  n1-standard-1  1.15.12-gke.2  6          RUNNING
+```
+**Cluster**
+![GCloud](/images/18.png)
+
+**VMs**
+![GCloud](/images/19.png)
+
+6. Cluster configuarion
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % gcloud container clusters get-credentials elena-k8s --zone europe-west3 
+Fetching cluster endpoint and auth data.
+kubeconfig entry generated for elena-k8s.
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % kubectl cluster-info
+Kubernetes master is running at https://35.246.178.151
+GLBCDefaultBackend is running at https://35.246.178.151/api/v1/namespaces/kube-system/services/default-http-backend:http/proxy
+Heapster is running at https://35.246.178.151/api/v1/namespaces/kube-system/services/heapster/proxy
+KubeDNS is running at https://35.246.178.151/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+Metrics-server is running at https://35.246.178.151/api/v1/namespaces/kube-system/services/https:metrics-server:/proxy
+```
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % kubectl get nodes
+NAME                                       STATUS   ROLES    AGE   VERSION
+gke-elena-k8s-default-pool-50406d1c-8zw3   Ready    <none>   11m   v1.15.12-gke.2
+gke-elena-k8s-default-pool-50406d1c-fx53   Ready    <none>   11m   v1.15.12-gke.2
+gke-elena-k8s-default-pool-ab5003d1-cwht   Ready    <none>   11m   v1.15.12-gke.2
+gke-elena-k8s-default-pool-ab5003d1-d3bh   Ready    <none>   11m   v1.15.12-gke.2
+gke-elena-k8s-default-pool-dea0cd3b-c43h   Ready    <none>   11m   v1.15.12-gke.2
+gke-elena-k8s-default-pool-dea0cd3b-tds0   Ready    <none>   11m   v1.15.12-gke.2
+```
+
+Note: *num-nodes es la cantidad de nodos del grupo en un clúster zonal. Si usas clústeres multizonales o regionales, nun-nodes es la cantidad de nodos para cada zona en la que se encuentran los grupos de nodos.*
+
+Assign roles
+```
+kubectl label node *node name* node-role.kubernetes.io/*role*=*role*
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % kubectl get nodes -o wide                                                                        
+NAME                                       STATUS   ROLES    AGE   VERSION          INTERNAL-IP   EXTERNAL-IP      OS-IMAGE                             KERNEL-VERSION   CONTAINER-RUNTIME
+gke-elena-k8s-default-pool-50406d1c-8zw3   Ready    worker   91m   v1.15.12-gke.2   10.156.0.3    34.107.67.175    Container-Optimized OS from Google   4.19.112+        docker://19.3.1
+gke-elena-k8s-default-pool-50406d1c-fx53   Ready    master   91m   v1.15.12-gke.2   10.156.0.2    34.107.85.39     Container-Optimized OS from Google   4.19.112+        docker://19.3.1
+gke-elena-k8s-default-pool-ab5003d1-cwht   Ready    master   91m   v1.15.12-gke.2   10.156.0.4    34.89.209.85     Container-Optimized OS from Google   4.19.112+        docker://19.3.1
+gke-elena-k8s-default-pool-ab5003d1-d3bh   Ready    worker   91m   v1.15.12-gke.2   10.156.0.7    34.107.32.230    Container-Optimized OS from Google   4.19.112+        docker://19.3.1
+gke-elena-k8s-default-pool-dea0cd3b-c43h   Ready    worker   91m   v1.15.12-gke.2   10.156.0.5    35.242.192.202   Container-Optimized OS from Google   4.19.112+        docker://19.3.1
+gke-elena-k8s-default-pool-dea0cd3b-tds0   Ready    worker   91m   v1.15.12-gke.2   10.156.0.6    35.234.102.146   Container-Optimized OS from Google   4.19.112+        docker://19.3.1
+```
+
+## Try out cypress test app locally
+
+![GCloud](/images/20.png)
+
+## Deploy cypress test app in cluster
+
++ build docker image
++ push image to docker hub
+![GCloud](/images/21.png)
+
++ deploy image
+
+![GCloud](/images/22.png)
+
+![GCloud](/images/23.png)
+
+![GCloud](/images/24.png)
+
+### Problem SOLVED: Pods crashing
+
+![GCloud](/images/24.png)
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena game % kubectl get pods -o wide                  
+NAME                            READY   STATUS             RESTARTS   AGE     IP          NODE                                       NOMINATED NODE   READINESS GATES
+conduit-test-74cdfc49bb-8njf5   0/1     CrashLoopBackOff   725        2d19h   10.16.4.4   gke-elena-k8s-default-pool-dea0cd3b-c43h   <none>           <none>
+conduit-test-74cdfc49bb-bl4n4   0/1     CrashLoopBackOff   731        2d19h   10.16.6.4   gke-elena-k8s-default-pool-dea0cd3b-tds0   <none>           <none>
+conduit-test-74cdfc49bb-dvplt   0/1     CrashLoopBackOff   728        2d19h   10.16.2.4   gke-elena-k8s-default-pool-50406d1c-fx53   <none>           <none>
+conduit-test-74cdfc49bb-lxgpq   0/1     CrashLoopBackOff   721        2d19h   10.16.1.5   gke-elena-k8s-default-pool-ab5003d1-cwht   <none>           <none>
+conduit-test-74cdfc49bb-s2tt8   1/1     Running            726        2d19h   10.16.3.4   gke-elena-k8s-default-pool-50406d1c-8zw3   <none>           <none>
+````
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena game % kubectl describe pod conduit-test-74cdfc49bb-lxgpq
+Name:           conduit-test-74cdfc49bb-lxgpq
+Namespace:      default
+Priority:       0
+Node:           gke-elena-k8s-default-pool-ab5003d1-cwht/10.156.0.4
+Start Time:     Sun, 09 Aug 2020 14:12:11 +0100
+Labels:         app=conduit-test
+                pod-template-hash=74cdfc49bb
+Annotations:    kubernetes.io/limit-ranger: LimitRanger plugin set: cpu request for container conduit-test-1
+Status:         Running
+IP:             10.16.1.5
+IPs:            <none>
+Controlled By:  ReplicaSet/conduit-test-74cdfc49bb
+Containers:
+  conduit-test-1:
+    Container ID:   docker://056568616b94374ab6bcf899508ddc2744ced7e2e6a49b19ade06543351f8210
+    Image:          index.docker.io/elenaminyaeva/conduit-test:latest
+    Image ID:       docker-pullable://elenaminyaeva/conduit-test@sha256:8a61d7fdc491743d9cf38a04ba6566dee5fe75d879a243542cb0890ce5dbd08c
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    1
+      Started:      Wed, 12 Aug 2020 09:21:29 +0100
+      Finished:     Wed, 12 Aug 2020 09:21:58 +0100
+    Ready:          False
+    Restart Count:  722
+    Requests:
+      cpu:        100m
+    Environment:  <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-j8g54 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             False 
+  ContainersReady   False 
+  PodScheduled      True 
+Volumes:
+  default-token-j8g54:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-j8g54
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type     Reason   Age                       From                                               Message
+  ----     ------   ----                      ----                                               -------
+  Normal   Pulling  36m (x717 over 2d19h)     kubelet, gke-elena-k8s-default-pool-ab5003d1-cwht  Pulling image "index.docker.io/elenaminyaeva/conduit-test:latest"
+  Warning  BackOff  113s (x16850 over 2d19h)  kubelet, gke-elena-k8s-default-pool-ab5003d1-cwht  Back-off restarting failed container
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena game % kubectl describe pod conduit-test-74cdfc49bb-lxgpq
+...
+[start:server:coverage] Error: /usr/src/app/server/node_modules/sodium-native/build/Release/sodium.node: invalid ELF header
+...
+```
+
+**Solution 1**
+
+*Build image on Linux machine*
+
+```
+conduit-new-d96d46897-bp4k5     0/1     CrashLoopBackOff   3          82s     10.16.2.5   gke-elena-k8s-default-pool-50406d1c-fx53   <none>           <none>
+conduit-new-d96d46897-klkz2     0/1     CrashLoopBackOff   3          82s     10.16.4.6   gke-elena-k8s-default-pool-dea0cd3b-c43h   <none>           <none>
+conduit-new-d96d46897-sthn8     0/1     CrashLoopBackOff   3          82s     10.16.1.7   gke-elena-k8s-default-pool-ab5003d1-cwht   <none>           <none>
+```
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena game % kubectl logs conduit-new-d96d46897-bp4k5
+
+> realworld@1.0.0 start /usr/src/app
+> concurrently npm:start:client npm:start:server
+
+sh: 1: concurrently: not found
+npm ERR! code ELIFECYCLE
+npm ERR! syscall spawn
+npm ERR! file sh
+npm ERR! errno ENOENT
+npm ERR! realworld@1.0.0 start: `concurrently npm:start:client npm:start:server`
+npm ERR! spawn ENOENT
+npm ERR! 
+npm ERR! Failed at the realworld@1.0.0 start script.
+npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+
+npm ERR! A complete log of this run can be found in:
+npm ERR!     /root/.npm/_logs/2020-08-12T12_40_21_709Z-debug.log
+```
+
+*Extend Dockerfile*
+
+```
+FROM node:12
+  
+# Create app directory
+WORKDIR /usr/src/app
+
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
+COPY package*.json ./
+COPY client/package*.json ./
+COPY server/package*.json ./
+
+RUN npm install -g npm@latest
+RUN npm install
+RUN npm install -g parcel-bundler
+# If you are building your code for production
+# RUN npm ci --only=production
+
+# Bundle app source
+COPY . .
+
+EXPOSE 4100
+CMD [ "npm", "start" ]
+```
+![GCloud](/images/26.png)
+
+```
+conduit-supernew-7d559bd984-2g2l6   1/1     Running            0          5m47s   10.16.3.7   gke-elena-k8s-default-pool-50406d1c-8zw3   <none>           <none>
+conduit-supernew-7d559bd984-nxk7x   1/1     Running            0          3m46s   10.16.2.8   gke-elena-k8s-default-pool-50406d1c-fx53   <none>           <none>
+conduit-supernew-7d559bd984-rfwfk   1/1     Running            0          3m46s   10.16.1.8   gke-elena-k8s-default-pool-ab5003d1-cwht   <none>           <none>
+conduit-supernew-7d559bd984-vbsgz   1/1     Running            0          5m47s   10.16.6.6   gke-elena-k8s-default-pool-dea0cd3b-tds0   <none>           <none>
+conduit-supernew-7d559bd984-xb6w6   1/1     Running            0          5m47s   10.16.4.7   gke-elena-k8s-default-pool-dea0cd3b-c43h   <none>           <none>
+```
+
+## Check functionality
+
+**Expose service**
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena server % kubectl get svc
+NAME                       TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)        AGE
+conduit-supernew-service   LoadBalancer   10.19.246.8     35.198.86.120   80:30431/TCP   86s
+conduit-test-service       LoadBalancer   10.19.245.148   34.107.48.37    80:30936/TCP   3d20h
+kubernetes                 ClusterIP      10.19.240.1     <none>          443/TCP        5d22h
+ngnix-deploy-87lfq         LoadBalancer   10.19.240.213   34.89.145.47    80:32265/TCP   5d19h
+```
+
