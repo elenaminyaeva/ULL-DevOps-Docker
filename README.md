@@ -1,4 +1,4 @@
-# ULL-DevOps-Docker-Swarm
+# ULL-DevOps-Docker
 
 ## Environment Set Up
 
@@ -958,7 +958,6 @@ if(isProduction){
 }
 ```
 
-##
 
 ### Set up MetalLB Load Balancing
 
@@ -1796,3 +1795,41 @@ Knex: run
 [start:server] npm run start:server exited with code 1
 
 ```
+
+**Reason**
+GKE does not support sqlite3, let's try to use other database, f.e MongoDB
+
+**Solution**
++ Repeat the steps in chapter *## MongoDB*
+
+```
+mongo-795766d495-9pnqr               1/1     Running   0          3h      10.16.3.23   gke-elena-k8s-default-pool-50406d1c-8zw3   <none>           <none>
+mongo-795766d495-wfqxl               1/1     Running   0          3h      10.16.6.21   gke-elena-k8s-default-pool-dea0cd3b-tds0   <none>           <none>
+mongo-795766d495-z8t2n               1/1     Running   0          3h      10.16.1.33   gke-elena-k8s-default-pool-ab5003d1-cwht   <none>           <none>
+
+```
+
++ Deploy the docker image done in chapter *## Push containers to docker hub*
+image: index.docker.io/elenaminyaeva/realworld-mongo:elena_images
+
+```
+realworrld-mongo-9d57d7cf9-4gxd7     1/1     Running   0          101s    10.16.6.22   gke-elena-k8s-default-pool-dea0cd3b-tds0   <none>           <none>
+realworrld-mongo-9d57d7cf9-bnv9j     1/1     Running   0          101s    10.16.2.25   gke-elena-k8s-default-pool-50406d1c-fx53   <none>           <none>
+realworrld-mongo-9d57d7cf9-r9d69     1/1     Running   0          101s    10.16.1.36   gke-elena-k8s-default-pool-ab5003d1-cwht   <none>           <none>
+
+```
+
+![GCloud](/images/29.png)
+
+
+### Problem with MongoDB
+
+![GCloud](/images/30.png)
+
+*Solution*
+
+By default, Mongoose 5.x calls the MongoDB driver's ensureIndex() function. The MongoDB driver deprecated this function in favor of createIndex(). Set the useCreateIndex global option to opt in to making Mongoose use createIndex() instead.
+
+mongoose.set('useCreateIndex', true);
+
+![GCloud](/images/31.png)
