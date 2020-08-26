@@ -1469,7 +1469,7 @@ Client Version: version.Info{Major:"1", Minor:"18", GitVersion:"v1.18.6", GitCom
 5. Create a cluster
 
 ```
-gcloud services enable container.googleapis.com
+gcloud services enable container.googleapis.com 
 ```
 ```
 gcloud container clusters create elena-k8s --zone europe-west3 --num-nodes=2
@@ -1833,3 +1833,206 @@ By default, Mongoose 5.x calls the MongoDB driver's ensureIndex() function. The 
 mongoose.set('useCreateIndex', true);
 
 ![GCloud](/images/31.png)
+
+## CircleCI orbs
+
+```
+gcloud projects create elena-circle-ci-demo
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % gcloud projects list                       
+PROJECT_ID                NAME                  PROJECT_NUMBER
+elena-circle-ci-demo      elena-circle-ci-demo  765229526016
+```
+```
+gcloud config set project elena-circle-ci-demo
+```
+Activate billing account 
+
+```
+gcloud services enable container.googleapis.com
+```
+```
+gcloud components install kubectl
+```
+
+```
+gcloud container clusters create circle-ci-cluster --zone europe-west3 --num-nodes=2
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % gcloud container clusters list
+NAME               LOCATION      MASTER_VERSION  MASTER_IP     MACHINE_TYPE   NODE_VERSION   NUM_NODES  STATUS
+circle-ci-cluster  europe-west3  1.15.12-gke.2   35.234.125.0  n1-standard-1  1.15.12-gke.2  6          RUNNING
+```
+Generate kubeconfig
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % gcloud container clusters get-credentials circle-ci-cluster --zone europe-west3
+Fetching cluster endpoint and auth data.
+kubeconfig entry generated for circle-ci-cluster.
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % kubectl config current-context
+gke_elena-circle-ci-demo_europe-west3_circle-ci-cluster
+```
+
+### Dockerizing a simple Node.js application
+
+```
+git clone https://github.com/daumie/circleci-orbs.git
+```
+```
+docker build -t circleci-gke:v1 .
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena circleci-orbs % docker images
+REPOSITORY                        TAG                 IMAGE ID            CREATED             SIZE
+circleci-gke                      v1                  4ec4fe7d1d65        30 seconds ago      120MB
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena ~ % curl http://localhost:3000
+<html>
+  <head>
+    <title></title>
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div style="margin-top:50px">
+      <div class="panel panel-info">
+        <div  class="text-center">
+          <h3 class="panel-title" >Simple Demo Application</h3>
+        </div>
+        <div class="panel-body">
+          <div class="alert alert-success" >
+            <p class="text-center">
+              Basic App to demonstrate use of CircleCi Orbs to simplify Continous
+              Intrgration and Continous Deployment (CI/CD)</p>
+          </div>
+          <div class="text-center">
+            <img src="circleci-logo.png"  alt="circleci-logo" />
+          </div>
+
+          <div class="text-center">
+            <p>Author:</p>
+            <div class="text-center">
+              <a href="https://twitter.com/DominicMotuka">@DominicMotuka</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js"></script>
+  </body>
+</html>
+```
+```
+% docker run -p 3000:3000 circleci-gke:v1
+
+> orbs-kubernetes-introduction@1.0.0 start /usr/src/app
+> node server.js
+
+App at: http://localhost:3000
+GET / 200 5.011 ms - 1211
+```
+Push containerized Docker image to a registry
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena circleci-orbs % docker tag circleci-gke:v1 gcr.io/circle-ci-demo/circleci-gke:v1
+lenaminyaeva@MacBook-Pro-de-Lena circleci-orbs % docker push gcr.io/circle-ci-demo/circleci-gke:v1
+```
+
+### Configuring Kubernetes manifests for deployment
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena admin % ls
+app-deployment.yaml	app-service.yaml
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena circleci-orbs % kubectl apply --validate=true   -f admin/
+deployment.apps/circle-ci-cluster created
+service/circle-service created
+```
+```
+lenaminyaeva@MacBook-Pro-de-Lena circleci-orbs % kubectl get services
+NAME             TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+circle-service   LoadBalancer   10.11.246.104   <pending>     3000:30185/TCP   25s
+```
++ Add config.yaml
+According to https://circleci.com/blog/automating-the-deploy-of-an-adonis-api-to-heroku/
+
+Changes according to current versions:
+```
+orbs:
+  node: circleci/node@1.1.6
+  gcp-gke: circleci/gcp-gke@1.1.0
+  gcr: circleci/gcp-gcr@0.8.0
+```
+
+https://circleci.com/orbs/registry/orb/circleci/gcp-gke?version=1.1.0
+
+```
+deploy:
+    description: Deploy application to Google Kubernetes Engine
+    machine: true
+    parameters:
+            gcloud-service-key:
+                default: GCLOUD_SERVICE_KEY
+                description: The gcloud service key
+                type: env_var_name
+            google-compute-zone:
+                default: GOOGLE_COMPUTE_ZONE
+                description: The Google compute zone to connect with via the gcloud CLI
+                type: env_var_name
+            google-project-id:
+                default: GOOGLE_PROJECT_ID
+                description: The Google project ID to connect with via the gcloud CLI
+                type: env_var_name
+    steps:
+      # Install `gcloud` and `kubectl` if not already installed.
+      - gcp-gke/install
+      # Initialize the `gcloud` CLI.
+      - run: echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
+      - run: gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
+      - run: gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+      - run: gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+      - gcp-gke/update-kubeconfig-with-credentials:
+          cluster: circle-ci-cluster
+          gcloud-service-key: GCLOUD_SERVICE_KEY
+          google-compute-zone: GOOGLE_COMPUTE_ZONE
+          google-project-id: GOOGLE_PROJECT_ID
+      # Update a deployment's Docker image.
+      - gcp-gke/rollout-image:
+          cluster: circle-ci-cluster
+          deployment: circle-ci-cluster
+          container: dominic-backend
+          image: gcr.io/elena-circle-ci-demo/circle-gke
+          tag: v2
+```
++ Grand permissions to the service account 
+
+![GCloud](/images/33.png)
+
++ Check image name 
+
+Google Cloud Plattform --> Container Registry --> Images
+
+In my case ```gcr.io/elena-circle-ci-demo/circle-gke```
+
+![GCloud](/images/32.png)
+
+```
+lenaminyaeva@MacBook-Pro-de-Lena circleci-orbs % kubectl get services
+NAME             TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+circle-service   LoadBalancer   10.11.246.104   34.89.220.8   3000:30185/TCP   33h
+kubernetes       ClusterIP      10.11.240.1     <none>        443/TCP          33h
+```
+
+### Check results 
+
+![GCloud](/images/34.png)
+![GCloud](/images/35.png)
