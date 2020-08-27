@@ -2099,3 +2099,5 @@ latest: digest: sha256:e833a1fc3adbc8745649ee5527c49582f19cf0e0d4a354f4ba2fda802
 + Set Up the project in CircleCI
 
 ![GCloud](/images/37.png)
+
+https://console.cloud.google.com/kubernetes/workload?project=elena-circle-ci-react&supportedpurview=project&pageState=(%22savedViews%22:(%22i%22:%224c755045357241b7a299ab8a3f5d564d%22,%22c%22:%5B%5D,%22n%22:%5B%5D)) 
