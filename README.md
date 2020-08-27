@@ -389,9 +389,9 @@ Worker_2
 ![Docker](/images/11.png)
 
 
-## Kubernetes
+# Kubernetes
 
-### Preconditions 
+## Preconditions 
 
 + Install
 
@@ -431,7 +431,7 @@ root     ALL=(ALL) NOPASSWD:ALL
 pip 9.0.3 from /usr/lib/python3.6/site-packages (python 3.6)
 ```
 
-### Kubernetes
+## Kubernetes Cluster Config
 
 ```
 git clone https://github.com/kubernetes-sigs/kubespray.git
@@ -900,6 +900,7 @@ Repeat steps for **react-kubernetes** image
 
 ![Docker](/images/14.png)
 
+---
 ### Problem SOLVED 
 
 **kubectl logs -p realworld-d8b559548-srnfd**
@@ -945,7 +946,6 @@ npm ERR! This is probably not a problem with npm. There is likely additional log
 npm ERR! A complete log of this run can be found in:
 npm ERR!     /home/node/.npm/_logs/2020-07-23T12_18_18_608Z-debug.log
 
----
 **SOLUTION**
 
 Change app.js file --> change mongo host from *localhost* to *mongo*
@@ -957,9 +957,9 @@ if(isProduction){
   mongoose.set('debug', true);
 }
 ```
+--- 
 
-
-### Set up MetalLB Load Balancing
+## Set up MetalLB Load Balancing
 
 ```
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
@@ -1408,6 +1408,8 @@ ingress-resource-1   <none>   nginx.example.com,react.example.com   192.168.20.2
 ```
 ![Docker](/images/16.png)
 ![Docker](/images/17.png)
+
+---
 ### Problem SOLVED
 
 502 Bad Gateway error for react.example.com
@@ -1439,7 +1441,7 @@ Change targetPort=containerPort=appPort (according to package.json)
     "eject": "react-scripts eject"
   },
 
-
+--- 
 # K8s in GKE
 
 1. Install Google Cloud SDK
@@ -1546,6 +1548,8 @@ gke-elena-k8s-default-pool-dea0cd3b-tds0   Ready    worker   91m   v1.15.12-gke.
 ![GCloud](/images/23.png)
 
 ![GCloud](/images/24.png)
+
+---
 
 ### Problem SOLVED: Pods crashing
 
@@ -1682,6 +1686,8 @@ COPY . .
 EXPOSE 4100
 CMD [ "npm", "start" ]
 ```
+--- 
+
 ![GCloud](/images/26.png)
 
 ```
@@ -1821,7 +1827,7 @@ realworrld-mongo-9d57d7cf9-r9d69     1/1     Running   0          101s    10.16.
 
 ![GCloud](/images/29.png)
 
-
+--- 
 ### Problem with MongoDB
 
 ![GCloud](/images/30.png)
@@ -1834,7 +1840,10 @@ mongoose.set('useCreateIndex', true);
 
 ![GCloud](/images/31.png)
 
+---
+
 ## CircleCI orbs
+### Example app
 
 ```
 gcloud projects create elena-circle-ci-demo
@@ -1876,7 +1885,7 @@ lenaminyaeva@MacBook-Pro-de-Lena ~ % kubectl config current-context
 gke_elena-circle-ci-demo_europe-west3_circle-ci-cluster
 ```
 
-### Dockerizing a simple Node.js application
+#### Dockerizing a simple Node.js application
 
 ```
 git clone https://github.com/daumie/circleci-orbs.git
@@ -1940,13 +1949,17 @@ App at: http://localhost:3000
 GET / 200 5.011 ms - 1211
 ```
 Push containerized Docker image to a registry
+Configurate service account [!]
+https://cloud.google.com/iam/docs/creating-managing-service-accounts 
+https://console.cloud.google.com/projectselector2/iam-admin/serviceaccounts?_ga=2.30809080.617022880.1598521784-1418379049.1595414877&supportedpurview=project 
+
 
 ```
 lenaminyaeva@MacBook-Pro-de-Lena circleci-orbs % docker tag circleci-gke:v1 gcr.io/circle-ci-demo/circleci-gke:v1
 lenaminyaeva@MacBook-Pro-de-Lena circleci-orbs % docker push gcr.io/circle-ci-demo/circleci-gke:v1
 ```
 
-### Configuring Kubernetes manifests for deployment
+#### Configuring Kubernetes manifests for deployment
 
 ```
 lenaminyaeva@MacBook-Pro-de-Lena admin % ls
@@ -2036,3 +2049,53 @@ kubernetes       ClusterIP      10.11.240.1     <none>        443/TCP          3
 
 ![GCloud](/images/34.png)
 ![GCloud](/images/35.png)
+
+## Real world App
+
++ New container created
+```
+NAME                     LOCATION      MASTER_VERSION  MASTER_IP       MACHINE_TYPE   NODE_VERSION   NUM_NODES  STATUS
+circle-ci-react-cluster  europe-west3  1.15.12-gke.2   35.198.108.204  n1-standard-1  1.15.12-gke.2  6          RUNNING
+```
++ Kubeconfig entry generated
+```
+lenaminyaeva@MacBook-Pro-de-Lena DevOps % gcloud container clusters get-credentials circle-ci-react-cluster --zone europe-west3
+Fetching cluster endpoint and auth data.
+```
++ Push image to registry
+
+---
+### PROBLEM SOLVED
+```
+docker push gcr.io/elena-circle-ci-eact/web-app
+You don't have the needed permissions to perform this operation, and you may have invalid credentials. To authenticate your request, follow the steps in: https://cloud.google.com/container-registry/docs/advanced-authentication
+```
+```
+gcloud auth configure-docker
+```
+---
+```
+lenaminyaeva@MacBook-Pro-de-Lena react-redux-realworld-example-app % docker tag web-app gcr.io/elena-circle-ci-react/web-app
+lenaminyaeva@MacBook-Pro-de-Lena react-redux-realworld-example-app % docker push gcr.io/elena-circle-ci-react/web-app
+The push refers to repository [gcr.io/elena-circle-ci-react/web-app]
+3a85af8cd7f0: Mounted from elena-circle-ci-demo/web-app 
+66d16a4a1a2c: Mounted from elena-circle-ci-demo/web-app 
+d19f2c03b21a: Mounted from elena-circle-ci-demo/web-app 
+fc9182df36ae: Mounted from elena-circle-ci-demo/web-app 
+0e777550bf1c: Layer already exists 
+b95bc4ee3ca0: Layer already exists 
+82bdcf2b1b9e: Layer already exists 
+487d5f9ec63f: Layer already exists 
+b24e42eb9639: Layer already exists 
+9262398ff7bf: Layer already exists 
+804aae047b71: Layer already exists 
+5d33f5d87bf5: Layer already exists 
+4e38024e7e09: Layer already exists 
+latest: digest: sha256:e833a1fc3adbc8745649ee5527c49582f19cf0e0d4a354f4ba2fda8029cc2980 size: 3051
+```
+
+![GCloud](/images/36.png)
+
++ Set Up the project in CircleCI
+
+![GCloud](/images/37.png)
